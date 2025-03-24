@@ -5,8 +5,8 @@ import uvicorn
 from fastapi import FastAPI
 
 from manager import SessionManager, load_config
-from schema import DBSession, Query
-from utils import custom_serializer, response_convert
+from schema import DBConfig, DBSession, Query
+from utils import response_convert
 
 app = FastAPI()
 
@@ -18,21 +18,15 @@ async def read_root():
     return "BGDB is up and running!"
 
 
-@app.get("/load_default_config")
-async def load_default_config() -> str:
-    db_config = load_config("config.json")
+@app.post("/create_session")
+async def create_session(db_config: DBConfig) -> str:
     session_id = await MANAGER.start_session(db_config)
-    print("Session started:", session_id)
-    print("Sessions:", MANAGER.show_sessions())
     return session_id
 
 
 @app.get("/get_sessions")
 async def get_sessions() -> list[DBSession]:
     return MANAGER.show_sessions()
-
-
-# return json.dumps(sessions, default=custom_serializer)
 
 
 @app.get("/delete_session/{session_id}")
