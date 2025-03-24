@@ -1,4 +1,5 @@
 import json
+import os
 import uuid
 from datetime import datetime, timezone
 from pathlib import PosixPath
@@ -10,18 +11,32 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 from schema import DBConfig, DBResult, DBSession
 
+DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
 
-def load_config(conf: str | PosixPath) -> DBConfig:
+
+def load_config(conf: str | PosixPath) -> dict[str, DBConfig]:
     with open(conf, "r") as f:
         config = json.load(f)
-    return DBConfig.model_validate(config)
+    return {k: DBConfig.model_validate(c) for k, c in config.items()}
 
 
 class SessionManager:
-    def __init__(self):
+    def __init__(self, config_folder=None):
         self.sessions = {}
+        self.config_folder = DEFAULT_CONFIG_FOLDER if config_folder is None else config_folder
+        self._configs = {}
 
-    async def start_session(self, db_config: DBConfig) -> str:
+    @property
+    def configs(self) -> dict[str, DBConfig]:
+        config_file = f"{self.config_folder}/config.json"
+        try:
+            self._configs = load_config(config_file)
+        except Exception:
+            print(f"The config file is broken: {config_file}.")
+        return self._configs
+
+    async def start_session(self, db_config_id: str) -> str:
+        db_config = self.configs[db_config_id]
         session_uuid = str(uuid.uuid4())
         db_url = db_config.url
         engine = create_async_engine(db_url, echo=False)
@@ -30,6 +45,7 @@ class SessionManager:
         self.sessions[session_uuid] = {
             "session": session,
             "engine": engine,
+            "db_config_id": db_config_id,
             "db_config": db_config.model_dump(),
             "connected_since": datetime.now(timezone.utc),
         }
@@ -52,7 +68,12 @@ class SessionManager:
             return []
         else:
             return [
-                DBSession(session_uuid=uuid, db_config=info["db_config"], connected_since=info["connected_since"])
+                DBSession(
+                    session_uuid=uuid,
+                    db_config=info["db_config"],
+                    connected_since=info["connected_since"],
+                    db_config_id=info["db_config_id"],
+                )
                 for uuid, info in self.sessions.items()
             ]
 

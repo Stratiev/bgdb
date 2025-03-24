@@ -25,17 +25,9 @@ class DBConfig(BaseModel):
         return f"{base_url}?ssl=require" if self.use_ssl else base_url
 
 
-    def model_dump_json(self, *args, **kwargs):
-        # Create a dictionary representation of the model
-        model_dict = self.model_dump()
-        # Replace the SecretStr with the actual password value
-        model_dict['password'] = self.password.get_secret_value()
-        # Serialize the dictionary to a JSON string
-        return json.dumps(model_dict, *args, **kwargs)
-
-
 class DBSession(BaseModel):
     session_uuid: UUID4
+    db_config_id: str
     db_config: DBConfig
     connected_since: datetime
 
@@ -66,6 +58,10 @@ class Query(BaseModel):
     query: str
     session_id: UUID4
     options: QueryOptions = Field(default_factory=QueryOptions)
+
+
+class ConfigRequest(BaseModel):
+    db_config_id: str
 
 
 class DBResult:

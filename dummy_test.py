@@ -15,6 +15,8 @@ print(requests.get(f"{url}/get_sessions").text)
 sessions = json.loads(requests.get(f"{url}/get_sessions").text)
 
 
+configs = json.loads(requests.get(f"{url}/fetch_configs").text)
+configs.keys()
 breakpoint()
 config_data = json.dumps(
     {
@@ -23,6 +25,8 @@ config_data = json.dumps(
     }
 )
 output = requests.post(f"{url}/create_session", headers=headers, data=config_data)
+{"db_config_id": "config_1"}
+output = requests.post(f"{url}/create_session", headers=headers, json={"db_config_id": "config_1"})
 session_id = requests.get(f"{url}/load_default_config").text.strip('"')
 print(session_id)
 print(requests.get(f"{url}/get_sessions").text)
