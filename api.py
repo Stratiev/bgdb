@@ -24,9 +24,9 @@ async def fetch_configs() -> dict[str, DBConfig]:
 
 
 @app.post("/create_session")
-async def create_session(config_request: ConfigRequest) -> str:
-    session_id = await MANAGER.start_session(config_request.db_config_id)
-    return session_id
+async def create_session(config_request: ConfigRequest) -> DBSession:
+    sessions = await MANAGER.start_session(config_request.db_config_id)
+    return sessions
 
 
 @app.get("/get_sessions")

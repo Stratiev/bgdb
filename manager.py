@@ -35,21 +35,27 @@ class SessionManager:
             print(f"The config file is broken: {config_file}.")
         return self._configs
 
-    async def start_session(self, db_config_id: str) -> str:
+    async def start_session(self, db_config_id: str) -> DBSession:
         db_config = self.configs[db_config_id]
         session_uuid = str(uuid.uuid4())
         db_url = db_config.url
         engine = create_async_engine(db_url, echo=False)
         session_maker = async_sessionmaker(engine, expire_on_commit=False)
         session = session_maker()
+        connected_since = datetime.now(timezone.utc)
         self.sessions[session_uuid] = {
             "session": session,
             "engine": engine,
             "db_config_id": db_config_id,
             "db_config": db_config.model_dump(),
-            "connected_since": datetime.now(timezone.utc),
+            "connected_since": connected_since,
         }
-        return session_uuid
+        return DBSession(
+            session_uuid=uuid.UUID(session_uuid),
+            db_config_id=db_config_id,
+            db_config=db_config,
+            connected_since=connected_since,
+        )
 
     async def execute_query(self, query: str, session_uuid: UUID4) -> list[dict]:
         session_info = self.sessions.get(str(session_uuid))
