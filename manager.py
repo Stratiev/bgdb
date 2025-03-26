@@ -5,11 +5,10 @@ from datetime import datetime, timezone
 from pathlib import PosixPath
 
 from pydantic import UUID4
+from schema import DBConfig, DBResult, DBSession
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-from schema import DBConfig, DBResult, DBSession
 
 DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
 
@@ -37,6 +36,16 @@ class SessionManager:
 
     async def start_session(self, db_config_id: str) -> DBSession:
         db_config = self.configs[db_config_id]
+        existing_session = {k: v for k, v in self.sessions.items() if v.get("db_config_id") == db_config_id}
+        if existing_session:
+            session_uuid = list(existing_session.keys())[0]
+            return DBSession(
+                session_uuid=uuid.UUID(session_uuid),
+                db_config_id=db_config_id,
+                db_config=db_config,
+                connected_since=existing_session[session_uuid]["connected_since"],
+            )
+
         session_uuid = str(uuid.uuid4())
         db_url = db_config.url
         engine = create_async_engine(db_url, echo=False)
