@@ -1,3 +1,4 @@
+import json
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import PosixPath
@@ -7,6 +8,20 @@ from uuid import UUID
 from pydantic import UUID4, BaseModel, Field, SecretStr
 from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy.engine.result import RMKeyView
+
+default_encoder = {
+    UUID: lambda v: str(v),  # Serialize UUID as string
+    datetime: lambda v: v.isoformat(),  # Serialize datetime to ISO format
+    SecretStr: lambda v: "***",  # Serialize datetime to ISO format
+}
+
+
+class DefaultEncoder(json.JSONEncoder):
+    def default(self, o):
+        for data_type, serialization in default_encoder.items():
+            if isinstance(o, data_type):
+                return serialization(o)
+        return json.JSONEncoder.default(self, o)
 
 
 class DBConfig(BaseModel):
@@ -33,11 +48,7 @@ class DBSession(BaseModel):
 
     class Config:
         # Custom serializers for specific fields
-        json_encoders = {
-            UUID: lambda v: str(v),  # Serialize UUID as string
-            datetime: lambda v: v.isoformat(),  # Serialize datetime to ISO format
-            SecretStr: lambda v: "***",  # Serialize datetime to ISO format
-        }
+        json_encoders = default_encoder
 
 
 class SupportedOutputFormats(Enum):

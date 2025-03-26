@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import FastAPI
 
 from manager import SessionManager
-from schema import ConfigRequest, DBConfig, DBSession, Query
+from schema import ConfigRequest, DBConfig, DBSession, DefaultEncoder, Query
 from utils import response_convert
 
 app = FastAPI()
@@ -47,8 +47,8 @@ async def delete_session(session_id: str) -> str:
 async def query(q: Query) -> Optional[str]:
     data = await MANAGER.execute_query(q.query, q.session_id)
     if q.options.file_redirection is None:
-        return json.dumps(data)
+        print(data)
+        return json.dumps(data, cls=DefaultEncoder)
     data = response_convert(data, q.options.file_redirection.output_format)
-    breakpoint()
     with open(q.options.file_redirection.output_file, "w") as f:
         f.write(data)
