@@ -43,8 +43,9 @@ async def delete_session(session_id: str) -> str:
     return f"Successfully deleted session {session_id}"
 
 
+# TODO: think about what are the correct return types here.
 @app.post("/query")
-async def query(q: Query) -> Optional[str]:
+async def query(q: Query) -> str:
     data = await MANAGER.execute_query(q.query, q.session_id)
     if q.options.file_redirection is None:
         print(data)
@@ -52,3 +53,4 @@ async def query(q: Query) -> Optional[str]:
     data = response_convert(data, q.options.file_redirection.output_format)
     with open(q.options.file_redirection.output_file, "w") as f:
         f.write(data)
+    return "Data redirected"
