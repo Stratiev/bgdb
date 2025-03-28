@@ -4,12 +4,14 @@ import uuid
 from datetime import datetime, timezone
 from pathlib import PosixPath
 
+import aiosqlite
 from pydantic import UUID4
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from schema import DBConfig, DBResult, DBSession
+from schema import ConfigValidationError, DBConfig, DBResult, DBSession
+from utils import validate_config
 
 DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
 
@@ -17,7 +19,7 @@ DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
 def load_config(conf: str | PosixPath) -> dict[str, DBConfig]:
     with open(conf, "r") as f:
         config = json.load(f)
-    return {k: DBConfig.model_validate(c) for k, c in config.items()}
+    return {k: validate_config(c) for k, c in config.items()}
 
 
 def create_connection(db_url):
@@ -41,8 +43,8 @@ class SessionManager:
         config_file = f"{self.config_folder}/config.json"
         try:
             self._configs = load_config(config_file)
-        except Exception:
-            print(f"The config file is broken: {config_file}.")
+        except ConfigValidationError as e:
+            print(f"The config file {config_file} is broken: {e}.")
         return self._configs
 
     async def start_session(self, db_config_id: str) -> DBSession:

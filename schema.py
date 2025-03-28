@@ -2,10 +2,10 @@ import json
 from datetime import datetime
 from enum import Enum, auto
 from pathlib import PosixPath
-from typing import Optional
+from typing import Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import UUID4, BaseModel, Field, SecretStr
+from pydantic import UUID4, BaseModel, Field, SecretStr, ValidationError
 from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy.engine.result import RMKeyView
 
@@ -24,13 +24,13 @@ class DefaultEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, o)
 
 
-class DBConfig(BaseModel):
+class PsqlConfig(BaseModel):
     hostname: str
     port: int
     dbname: str
     username: str
     password: SecretStr
-    protocol: str
+    protocol: Literal["postgresql+asyncpg"]
     use_ssl: Optional[bool] = None
 
     @property
@@ -38,6 +38,24 @@ class DBConfig(BaseModel):
         password = self.password.get_secret_value()
         base_url = f"{self.protocol}://{self.username}:{password}@{self.hostname}:{self.port}/{self.dbname}"
         return f"{base_url}?ssl=require" if self.use_ssl else base_url
+
+
+class SqlliteConfig(BaseModel):
+    path: str
+    protocol: Literal["sqlite+aiosqlite"]
+
+    @property
+    def url(self):
+        return f"{self.protocol}:///{self.path}"
+
+
+# This can't be dynamic so repetition is necessary here.
+DBConfig = Union[PsqlConfig, SqlliteConfig]
+db_config_types = [PsqlConfig, SqlliteConfig]
+
+
+class ConfigValidationError(Exception):
+    pass
 
 
 class DBSession(BaseModel):
