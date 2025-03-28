@@ -5,10 +5,11 @@ from datetime import datetime, timezone
 from pathlib import PosixPath
 
 from pydantic import UUID4
-from schema import DBConfig, DBResult, DBSession
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from schema import DBConfig, DBResult, DBSession
 
 DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
 
@@ -17,6 +18,16 @@ def load_config(conf: str | PosixPath) -> dict[str, DBConfig]:
     with open(conf, "r") as f:
         config = json.load(f)
     return {k: DBConfig.model_validate(c) for k, c in config.items()}
+
+
+def create_connection(db_url):
+    """
+    Place db specific stuff in here.
+    """
+    engine = create_async_engine(db_url, echo=False)
+    session_maker = async_sessionmaker(engine, expire_on_commit=False)
+    session = session_maker()
+    return engine, session
 
 
 class SessionManager:
@@ -48,9 +59,7 @@ class SessionManager:
 
         session_uuid = str(uuid.uuid4())
         db_url = db_config.url
-        engine = create_async_engine(db_url, echo=False)
-        session_maker = async_sessionmaker(engine, expire_on_commit=False)
-        session = session_maker()
+        engine, session = create_connection(db_url)
         connected_since = datetime.now(timezone.utc)
         self.sessions[session_uuid] = {
             "session": session,
