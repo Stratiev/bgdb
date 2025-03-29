@@ -1,11 +1,12 @@
 import json
+import os
 from datetime import datetime
-from enum import Enum, auto
-from pathlib import PosixPath
+from enum import Enum
+from pathlib import Path, PosixPath
 from typing import Literal, Optional, Union
 from uuid import UUID
 
-from pydantic import UUID4, BaseModel, Field, SecretStr, ValidationError
+from pydantic import UUID4, BaseModel, Field, SecretStr, field_validator
 from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy.engine.result import RMKeyView
 
@@ -48,6 +49,10 @@ class SqlliteConfig(BaseModel):
     def url(self):
         return f"{self.protocol}:///{self.path}"
 
+    @field_validator("path", mode="before")
+    def expand_user_path(cls, v):
+        return os.path.expanduser(v)
+
 
 # This can't be dynamic so repetition is necessary here.
 DBConfig = Union[PsqlConfig, SqlliteConfig]
@@ -70,13 +75,17 @@ class DBSession(BaseModel):
 
 
 class SupportedOutputFormats(Enum):
-    CSV = auto()
-    JSON = auto()
+    CSV = "CSV"
+    JSON = "JSON"
 
 
 class FileRedirection(BaseModel):
-    output_file: PosixPath
+    output_file: Path
     output_format: SupportedOutputFormats = SupportedOutputFormats.CSV
+
+    @field_validator("output_file", mode="before")
+    def parse_output_file(cls, v):
+        return Path(v)  # Convert string to PosixPath automatically
 
 
 class QueryOptions(BaseModel):
