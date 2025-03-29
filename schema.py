@@ -2,7 +2,7 @@ import json
 import os
 from datetime import datetime
 from enum import Enum
-from pathlib import Path, PosixPath
+from pathlib import Path
 from typing import Literal, Optional, Union
 from uuid import UUID
 
@@ -11,9 +11,9 @@ from sqlalchemy.engine.cursor import CursorResult
 from sqlalchemy.engine.result import RMKeyView
 
 default_encoder = {
-    UUID: lambda v: str(v),  # Serialize UUID as string
-    datetime: lambda v: v.isoformat(),  # Serialize datetime to ISO format
-    SecretStr: lambda v: "***",  # Serialize datetime to ISO format
+    UUID: lambda v: str(v),
+    datetime: lambda v: v.isoformat(),
+    SecretStr: lambda v: "***",
 }
 
 
@@ -60,6 +60,10 @@ db_config_types = [PsqlConfig, SqlliteConfig]
 
 
 class ConfigValidationError(Exception):
+    pass
+
+
+class QueryError(Exception):
     pass
 
 

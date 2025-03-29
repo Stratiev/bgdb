@@ -1,16 +1,19 @@
-import json
-from typing import Optional
+import logging
+import traceback
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Response
+from fastapi.responses import JSONResponse
 
-from manager import SessionManager
-from schema import ConfigRequest, DBConfig, DBSession, DefaultEncoder, Query
+from manager import MANAGER
+from query_cache import QUERY_CACHE
+from schema import ConfigRequest, DBConfig, DBSession, Query, QueryError
 from utils import response_convert
 
 app = FastAPI()
 
 
-MANAGER = SessionManager()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 @app.get("/")
@@ -43,14 +46,44 @@ async def delete_session(session_id: str) -> str:
     return f"Successfully deleted session {session_id}"
 
 
-# TODO: think about what are the correct return types here.
+## # TODO: think about what are the correct return types here.
+## @app.post("/query")
+## async def query(q: Query) -> str:
+##     data = await MANAGER.execute_query(q.query, q.session_id)
+##     if q.options.file_redirection is None:
+##         print(data)
+##         return json.dumps(data, cls=DefaultEncoder)
+##     data = response_convert(data, q.options.file_redirection.output_format)
+##     with open(q.options.file_redirection.output_file, "w") as f:
+##         f.write(data)
+##     return "Data redirected
+
+
 @app.post("/query")
-async def query(q: Query) -> str:
-    data = await MANAGER.execute_query(q.query, q.session_id)
+async def query(q: Query) -> Response:
+    try:
+        data = await MANAGER.execute_query(q.query, q.session_id)
+    except QueryError as e:
+        logger.warning(f"Encountered the following error: {e}")
+
+        logger.warning(traceback.format_exc())
+        return JSONResponse(content={"error": str(e)}, status_code=400)
+
+    db_config_id = MANAGER.sessions[str(q.session_id)]["db_config_id"]
+    cache_storage_format = q.options.file_redirection.output_format if q.options.file_redirection else "json"
+    query_id = QUERY_CACHE.store(q.query, db_config_id, data, cache_storage_format)
+
     if q.options.file_redirection is None:
-        print(data)
-        return json.dumps(data, cls=DefaultEncoder)
+        return JSONResponse(content={"query_id": query_id, "data": data})
+
     data = response_convert(data, q.options.file_redirection.output_format)
     with open(q.options.file_redirection.output_file, "w") as f:
         f.write(data)
-    return "Data redirected"
+
+    return JSONResponse(
+        content={
+            "message": "Data redirected",
+            "query_id": query_id,
+            "file": str(q.options.file_redirection.output_file),
+        }
+    )

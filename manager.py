@@ -6,10 +6,11 @@ from pathlib import PosixPath
 
 import aiosqlite
 from pydantic import UUID4
-from schema import ConfigValidationError, DBConfig, DBResult, DBSession
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+from schema import ConfigValidationError, DBConfig, DBResult, DBSession, QueryError
 from utils import validate_config
 
 DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
@@ -79,14 +80,14 @@ class SessionManager:
     async def execute_query(self, query: str, session_uuid: UUID4) -> list[dict]:
         session_info = self.sessions.get(str(session_uuid))
         if not session_info:
-            return "Session not found"
+            raise QueryError("Session not found")
         session = session_info["session"]
         try:
             result = await session.execute(text(query))
             output = DBResult(result)
             return output.to_dicts()
         except SQLAlchemyError as e:
-            return str(e)
+            raise QueryError(e._message())
 
     def show_sessions(self) -> list[DBSession]:
         if not self.sessions:
@@ -107,3 +108,6 @@ class SessionManager:
         if session_info:
             await session_info["session"].close()
             await session_info["engine"].dispose()
+
+
+MANAGER = SessionManager()
