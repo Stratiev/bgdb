@@ -7,11 +7,10 @@ block_cipher = None
 
 # List of required dependencies
 added_files = [
-    ('api.py', '.'),
-    ('dummy_test.py', '.'),
-    ('manager.py', '.'),
-    ('schema.py', '.'),
-    ('utils.py', '.')
+    ('src/api/api.py', '.'),
+    ('src/core/manager.py', '.'),
+    ('src/schema/schema.py', '.'),
+    ('src/utils/utils.py', '.')
 ]
 
 # Hidden imports for web framework and server
@@ -28,7 +27,7 @@ hidden_imports = [
 hidden_imports.extend(collect_submodules('asyncpg'))
 
 a = Analysis(
-    ['main.py'],
+    ['src/core/main.py'],
     pathex=[],
     binaries=[],
     datas=added_files,
