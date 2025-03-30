@@ -1,7 +1,8 @@
 import hashlib
 import json
 import os
-from typing import Optional
+
+from schema import SupportedOutputFormats
 
 CACHE_DIR = "query_cache"
 QUERY_LOG_FILE = os.path.join(CACHE_DIR, "queries.json")
@@ -27,18 +28,48 @@ def save_query_log(query_log):
         json.dump(query_log, f, indent=4)
 
 
+def result_to_content(result: dict, output_format: SupportedOutputFormats) -> str:
+    output = ""
+    if output_format == SupportedOutputFormats.CSV:
+        output = convert_to_csv(result)
+    if output_format == SupportedOutputFormats.JSON:
+        output = json.dumps(result, sort_keys=True, indent=4)
+    return output
+
+
+def convert_to_csv(data: dict) -> str:
+    """Convert result to CSV format."""
+    if not isinstance(data, list) or not data:
+        return ""
+    keys = data[0].keys()
+    csv_data = ",".join(keys) + "\n"
+    for row in data:
+        csv_data += ",".join(str(row[k]) for k in keys) + "\n"
+    return csv_data
+
+
 class QueryCache:
     """Handles caching of queries and their results."""
 
     def __init__(self, cache_dir: str = CACHE_DIR):
         self.cache_dir = cache_dir
 
-    def store(self, query: str, db_config_id: str, result: dict, output_format: Optional[str] = "json") -> str:
+    def store(
+        self, query: str, db_config_id: str, result: dict, output_format: SupportedOutputFormats
+    ) -> tuple[str, str]:
         query_hash = compute_hash(query + db_config_id)
-        result_ext = "csv" if output_format == "csv" else "json"
-        result_content = json.dumps(result, sort_keys=True) if output_format != "csv" else self._convert_to_csv(result)
-        result_file = os.path.join(self.cache_dir, f"{db_config_id}_{query_hash}_result.{result_ext}")
+        self._update_query_log(query, db_config_id, query_hash)
 
+        result_content = result_to_content(result, output_format)
+
+        # TODO: Store result only if different
+        result_file = os.path.join(self.cache_dir, f"{db_config_id}_{query_hash}_result.{output_format.value.lower()}")
+        with open(result_file, "w") as f:
+            f.write(result_content)
+
+        return query_hash, result_file
+
+    def _update_query_log(self, query: str, db_config_id: str, query_hash: str) -> None:
         # Load query log
         query_log = load_query_log()
 
@@ -49,23 +80,6 @@ class QueryCache:
         if not any(entry["hash"] == query_hash for entry in query_log[db_config_id]):
             query_log[db_config_id].append({"hash": query_hash, "query": query})
             save_query_log(query_log)
-
-        # Store result only if different
-        if not os.path.exists(result_file):
-            with open(result_file, "w") as f:
-                f.write(result_content)
-
-        return query_hash
-
-    def _convert_to_csv(self, data: dict) -> str:
-        """Convert result to CSV format."""
-        if not isinstance(data, list) or not data:
-            return ""
-        keys = data[0].keys()
-        csv_data = ",".join(keys) + "\n"
-        for row in data:
-            csv_data += ",".join(str(row[k]) for k in keys) + "\n"
-        return csv_data
 
 
 QUERY_CACHE = QueryCache()

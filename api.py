@@ -1,4 +1,5 @@
 import logging
+import os
 import traceback
 
 from fastapi import FastAPI, Response
@@ -6,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from manager import MANAGER
 from query_cache import QUERY_CACHE
-from schema import ConfigRequest, DBConfig, DBSession, Query, QueryError
+from schema import ConfigRequest, DBConfig, DBSession, Query, QueryError, SupportedOutputFormats
 from utils import response_convert
 
 app = FastAPI()
@@ -57,8 +58,10 @@ async def query(q: Query) -> Response:
         return JSONResponse(content={"error": str(e)}, status_code=400)
 
     db_config_id = MANAGER.sessions[str(q.session_id)]["db_config_id"]
-    cache_storage_format = q.options.file_redirection.output_format if q.options.file_redirection else "json"
-    query_id = QUERY_CACHE.store(q.query, db_config_id, data, cache_storage_format)
+    cache_storage_format = (
+        q.options.file_redirection.output_format if q.options.file_redirection else SupportedOutputFormats.JSON
+    )
+    query_id, cache_file = QUERY_CACHE.store(q.query, db_config_id, data, cache_storage_format)
 
     if q.options.file_redirection is None:
         return JSONResponse(content={"query_id": query_id, "data": data})
@@ -71,6 +74,7 @@ async def query(q: Query) -> Response:
         content={
             "message": "Data redirected",
             "query_id": query_id,
-            "file": str(q.options.file_redirection.output_file),
-        }
+            "file": os.path.abspath(cache_file),
+        },
+        status_code=200,
     )
