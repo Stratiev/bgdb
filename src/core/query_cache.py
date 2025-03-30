@@ -2,7 +2,7 @@ import hashlib
 import json
 import os
 
-from schema import SupportedOutputFormats
+from src.schema.schema import SupportedOutputFormats
 
 CACHE_DIR = "query_cache"
 QUERY_LOG_FILE = os.path.join(CACHE_DIR, "queries.json")

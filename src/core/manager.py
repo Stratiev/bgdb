@@ -9,9 +9,8 @@ from pydantic import UUID4
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-from schema import ConfigValidationError, DBConfig, DBResult, DBSession, QueryError
-from utils import validate_config
+from src.schema.schema import ConfigValidationError, DBConfig, DBResult, DBSession, QueryError
+from src.utils.utils import validate_config
 
 DEFAULT_CONFIG_FOLDER = os.path.expandvars("$HOME/Work/git/bgdb")
 

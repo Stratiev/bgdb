@@ -5,8 +5,7 @@ from io import StringIO
 from uuid import UUID
 
 from pydantic import SecretStr, ValidationError
-
-from schema import ConfigValidationError, DBConfig, SupportedOutputFormats, db_config_types
+from src.schema.schema import ConfigValidationError, DBConfig, SupportedOutputFormats, db_config_types
 
 
 def dicts_to_csv_str(data: list[dict]) -> str:

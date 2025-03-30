@@ -4,11 +4,10 @@ import traceback
 
 from fastapi import FastAPI, Response
 from fastapi.responses import JSONResponse
-
 from manager import MANAGER
 from query_cache import QUERY_CACHE
-from schema import ConfigRequest, DBConfig, DBSession, Query, QueryError, SupportedOutputFormats
-from utils import response_convert
+from src.schema.schema import ConfigRequest, DBConfig, DBSession, Query, QueryError, SupportedOutputFormats
+from src.utils.utils import response_convert
 
 app = FastAPI()
 
