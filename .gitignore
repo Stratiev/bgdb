@@ -1,0 +1,8 @@
+config.*
+.venv
+__pycache__
+query_cache/
+build/
+dist/
+.envrc
+.env
