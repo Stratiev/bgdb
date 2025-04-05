@@ -1,28 +1,22 @@
-import csv
+import pandas as pd
 import json
 from datetime import datetime
-from io import StringIO
 from uuid import UUID
 
 from pydantic import SecretStr, ValidationError
-from src.schema.schema import ConfigValidationError, DBConfig, SupportedOutputFormats, db_config_types
+from src.schema.schema import ConfigValidationError, DBConfig, FileRedirection, SupportedOutputFormats, db_config_types
 
 
 def dicts_to_csv_str(data: list[dict]) -> str:
-    output = StringIO()
-    writer = csv.DictWriter(output, fieldnames=data[0].keys())
-    writer.writeheader()
-    writer.writerows(data)
-
-    csv_string = output.getvalue()
-    output.close()
-    return csv_string
+    return pd.DataFrame(data).to_csv()
 
 
-def response_convert(data, output_format):
-    # The only advantage of this is to get mypy to stop complaining.
-    mapping = {SupportedOutputFormats.JSON: json.dumps, SupportedOutputFormats.CSV: dicts_to_csv_str}
-    return mapping[output_format](data)
+def response_to_file(data, file_redirection: FileRedirection):
+    if file_redirection.output_format == SupportedOutputFormats.JSON:
+        with open(file_redirection.output_file, "w") as f:
+            json.dump(data, f)
+    if file_redirection.output_format == SupportedOutputFormats.CSV:
+        pd.DataFrame(data).to_csv(file_redirection.output_file)
 
 
 # Custom serializer for UUID

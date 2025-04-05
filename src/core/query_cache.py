@@ -3,6 +3,7 @@ import json
 import os
 
 from src.schema.schema import SupportedOutputFormats
+from src.utils.utils import dicts_to_csv_str
 
 CACHE_DIR = "query_cache"
 QUERY_LOG_FILE = os.path.join(CACHE_DIR, "queries.json")
@@ -31,21 +32,10 @@ def save_query_log(query_log):
 def result_to_content(result: dict, output_format: SupportedOutputFormats) -> str:
     output = ""
     if output_format == SupportedOutputFormats.CSV:
-        output = convert_to_csv(result)
+        output = dicts_to_csv_str(result)
     if output_format == SupportedOutputFormats.JSON:
         output = json.dumps(result, sort_keys=True, indent=4)
     return output
-
-
-def convert_to_csv(data: dict) -> str:
-    """Convert result to CSV format."""
-    if not isinstance(data, list) or not data:
-        return ""
-    keys = data[0].keys()
-    csv_data = ",".join(keys) + "\n"
-    for row in data:
-        csv_data += ",".join(str(row[k]) for k in keys) + "\n"
-    return csv_data
 
 
 class QueryCache:

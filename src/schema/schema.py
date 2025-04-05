@@ -12,6 +12,7 @@ from sqlalchemy.engine.result import RMKeyView
 
 default_encoder = {
     UUID: lambda v: str(v),
+    # Not necessary but keeping just in case.
     datetime: lambda v: v.isoformat(),
     SecretStr: lambda v: "***",
 }
@@ -67,14 +68,12 @@ class QueryError(Exception):
     pass
 
 
-class DBSession(BaseModel):
-    session_uuid: UUID4
+class DBEngine(BaseModel):
+    engine_uuid: UUID4
     db_config_id: str
     db_config: DBConfig
-    connected_since: datetime
 
     class Config:
-        # Custom serializers for specific fields
         json_encoders = default_encoder
 
 
@@ -98,7 +97,7 @@ class QueryOptions(BaseModel):
 
 class Query(BaseModel):
     query: str
-    session_id: UUID4
+    engine_id: UUID4
     options: QueryOptions = Field(default_factory=QueryOptions)
 
 
